@@ -1,0 +1,93 @@
+import numpy as np
+import pandas as pd
+import statsmodels.api as sm
+import statsmodels.formula.api as smf
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+
+# Générer un échantillon de données simulées
+np.random.seed(42)
+
+# Variables indépendantes (X)
+X = np.random.normal(0, 1, 100)
+
+# Variable dépendante (Y) avec une relation linéaire plus du bruit
+Y = 3 + 2 * X + np.random.normal(0, 1, 100)
+
+# Créer un DataFrame
+data = pd.DataFrame({'X': X, 'Y': Y})
+
+# Afficher les premières lignes des données
+print(data.head())
+
+# ### 1. Statistiques descriptives de base
+print("\nStatistiques descriptives de base :")
+print(data.describe())
+
+# ### 2. Calcul de la corrélation
+correlation = data.corr()
+print("\nMatrice de corrélation :")
+print(correlation)
+
+# ### 3. Visualisation des données
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x='X', y='Y', data=data)
+plt.title('Nuage de points : Y vs X')
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.show()
+
+# ### 4. Régression linéaire simple
+# Ajout d'une constante pour l'interception dans le modèle de régression
+X_ = sm.add_constant(data['X'])
+model = sm.OLS(data['Y'], X_).fit()
+
+# Résumé de la régression
+print("\nRésumé de la régression linéaire :")
+print(model.summary())
+
+# ### 5. Test de normalité des résidus
+residuals = model.resid
+stat, p_value = stats.shapiro(residuals)
+print(f"\nTest de normalité des résidus (Shapiro-Wilk) : Statistic = {stat}, p-value = {p_value}")
+if p_value > 0.05:
+    print("Les résidus suivent une distribution normale.")
+else:
+    print("Les résidus ne suivent pas une distribution normale.")
+
+# ### 6. Visualisation des résidus
+plt.figure(figsize=(10, 6))
+sns.histplot(residuals, kde=True)
+plt.title('Distribution des résidus')
+plt.xlabel('Résidus')
+plt.ylabel('Fréquence')
+plt.show()
+
+# ### 7. Test d'hétéroscédasticité
+# Test de Breusch-Pagan pour détecter l'hétéroscédasticité des résidus
+from statsmodels.stats.diagnostic import het_breuschpagan
+test_statistic, p_value, _, _ = het_breuschpagan(residuals, X_)
+print(f"\nTest de Breusch-Pagan : p-value = {p_value}")
+if p_value > 0.05:
+    print("Pas d'hétéroscédasticité détectée.")
+else:
+    print("Hétéroscédasticité détectée.")
+
+# ### 8. Test de colinéarité (Variance Inflation Factor - VIF)
+from statsmodels.stats.outliers_influence import variance_inflation_factor
+X_with_const = sm.add_constant(data[['X']])
+vif = pd.DataFrame()
+vif["Variable"] = X_with_const.columns
+vif["VIF"] = [variance_inflation_factor(X_with_const.values, i) for i in range(X_with_const.shape[1])]
+
+print("\nVariance Inflation Factor (VIF) :")
+print(vif)
+
+# ### 9. Visualisation d'une régression avec la droite de régression
+plt.figure(figsize=(10, 6))
+sns.regplot(x='X', y='Y', data=data, scatter_kws={'color': 'blue'}, line_kws={'color': 'red'})
+plt.title('Régression linéaire : Y vs X avec la droite de régression')
+plt.xlabel('X')
+plt.ylabel('Y')
+plt.show()
